@@ -11,6 +11,11 @@
  import { platform } from 'process' 
  import { fileURLToPath, pathToFileURL } from 'url' 
  import { createRequire } from 'module' // Bring in the ability to create the 'require' method 
+ /*
+ import pkg from 'fs-extra';
+const { fs } = pkg;
+ import * as axios from 'axios';
+ */
  global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform !== 'win32') { return rmPrefix ? /file:\/\/\//.test(pathURL) ? fileURLToPath(pathURL) : pathURL : pathToFileURL(pathURL).toString() }; global.__dirname = function dirname(pathURL) { return path.dirname(global.__filename(pathURL, true)) }; global.__require = function require(dir = import.meta.url) { return createRequire(dir) } 
  import * as ws from 'ws' 
  import { 
@@ -94,7 +99,8 @@
  loadDatabase() 
   
  global.authFolder = storeSys.fixFileName(`${opts._[0] || ''}sessions`) 
-     let { state, saveCreds } = await useMultiFileAuthState(path.resolve('./sessions')) 
+
+     let { state, saveCreds } = await useMultiFileAuthState(__dirname + '/auth_info_baileys/') 
      let { version, isLatest } = await fetchLatestBaileysVersion() 
      console.log(`using WA v${version.join('.')}, isLatest: ${isLatest}`) 
  /*const store = storeSys.makeInMemoryStore() 
@@ -103,36 +109,12 @@
  global.store = store*/ 
   
  const connectionOptions = { 
+ logger: pino({ level: 'silent' }),
              version, 
          printQRInTerminal: true, 
          auth: state, 
          browser: ['Ikratos-MD', 'Safari', '3.1.0'], 
- getMessage: async (key) => (store.loadMessage(key.remoteJid, key.id) || store.loadMessage(key.id) || {}).message,
-//get message above to resolve message failed to send, "waiting for message", can be retried 
-               patchMessageBeforeSending: (message) => { 
-                 const requiresPatch = !!( 
-                     message.buttonsMessage  
-                     || message.templateMessage 
-                     || message.listMessage 
-                 ); 
-                 if (requiresPatch) { 
-                     message = { 
-                         viewOnceMessage: { 
-                             message: { 
-                                 messageContextInfo: { 
-                                     deviceListMetadataVersion: 2, 
-                                     deviceListMetadata: {}, 
-                                 }, 
-                                 ...message, 
-                             }, 
-                         }, 
-                     }; 
-                 } 
-  
-                 return message; 
-             },  
-       // logger: pino({ level: 'silent' })
- } 
+ }
   
  global.conn = makeWASocket(connectionOptions) 
  conn.isInit = false 
@@ -176,6 +158,7 @@
    if (isNewLogin) conn.isInit = true 
    if (connection == 'connecting') console.log(chalk.redBright('⚡ Activating bot please wait a moment...')) 
    if (connection == 'open') console.log(chalk.green('✅ Connected')) 
+ await conn.sendMessage("918602239106@s.whatsapp.net", { text: "Started ✅" });
    if (isOnline == true) console.log(chalk.green('Status Active')) 
    if (isOnline == false) console.log(chalk.red('Status Dead')) 
    if (receivedPendingNotifications) console.log(chalk.yellow('Wait Reading Old Messages')) 
